@@ -36,16 +36,16 @@ namespace InkDiscordBot
             switch (command.Data.Name)
             {
                 case VipBalance.BalanceCommand:
-                    await command.RespondAsync($"Your balance is {VipBalance.GetBalance(executingUser)}", ephemeral: true);
+                    await command.RespondAsync($"Your balance is {VipBalance.GetBalance(executingUser):#,##0}", ephemeral: true);
                     break;
                 case VipBalance.DebitCommand:
-                    await command.RespondAsync($"Debited {amountOption:0,000} from {userOption} - balance is {VipBalance.Debit(userOption, amountOption):0,000}", ephemeral: true);
+                    await command.RespondAsync($"Debited {amountOption:#,##0} from {userOption} - balance is {VipBalance.Debit(userOption, amountOption):#,##0}", ephemeral: true);
                     break;
                 case VipBalance.CreditCommand:
-                    await command.RespondAsync($"Credited {amountOption:0,000} to {userOption} - balance is {VipBalance.Credit(userOption, amountOption):0,000}", ephemeral: true);
+                    await command.RespondAsync($"Credited {amountOption:#,##0} to {userOption} - balance is {VipBalance.Credit(userOption, amountOption):#,##0}", ephemeral: true);
                     break;
                 case VipBalance.CheckCommand:
-                    await command.RespondAsync($"{userOption}'s balance is {VipBalance.GetBalance(userOption):0,000}", ephemeral: true);
+                    await command.RespondAsync($"{userOption}'s balance is {VipBalance.GetBalance(userOption):#,##0}", ephemeral: true);
                     break;
             }
             
