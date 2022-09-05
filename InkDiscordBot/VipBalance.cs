@@ -13,19 +13,31 @@ namespace InkDiscordBot
         public const string DebitCommand = "vip-debit";
         public const string CheckCommand = "vip-check";
 
+        public static Dictionary<string, int> Balances { get; } = new Dictionary<string, int>();
+
         public static double GetBalance(string userName)
         {
-            return 0;
+            Balances.TryGetValue(userName, out var balance);
+
+            return balance;
         }
 
-        public static double Credit(string userName, double amount)
+        public static double Credit(string userName, int amount)
         {
-            return 0;
+            if (!Balances.ContainsKey(userName))
+            {
+                Balances.Add(userName, amount);
+            }
+            else
+            {
+                Balances[userName] += amount;
+            }
+            return Balances[userName];
         }
 
-        public static double Debit(string userName, double amount)
+        public static double Debit(string userName, int amount)
         {
-            return 0;
+            return Credit(userName, amount * -1);
         }
     }
 }
