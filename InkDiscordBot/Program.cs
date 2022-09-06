@@ -10,14 +10,31 @@ namespace InkDiscordBot
     {
         public static Task Main(string[] args) => new Program().MainAsync();
 
-        private const string Locale = "en-US";
+        public const string BalanceCommand = "vip-balance";
+        public const string CreditCommand = "vip-credit";
+        public const string DebitCommand = "vip-debit";
+        public const string CheckCommand = "vip-check";
+        public const string Locale = "en-US";
         private DiscordSocketClient _client;
+
+        // Swappable implementation if needed
+        private IBalanceProvider _balanceProvider = new GoogleSheetBalanceProvider();
+
         public async Task MainAsync()
         {
-            _client = new DiscordSocketClient();
+            var config = new DiscordSocketConfig()
+            {
+                GatewayIntents = GatewayIntents.None
+            };
+            _client = new DiscordSocketClient(config);
             _client.Log += Log;
             _client.Ready += Client_Ready;
             _client.SlashCommandExecuted += Client_SlashCommandExecuted;
+
+            ///
+            /// Keep this secret - treat this as the bot's login and password all in one
+            /// Can be reset at https://discord.com/developers/applications/1016147035390488577/bot "reset token" (or sub your app id)
+            ///
             var token = ConfigurationManager.AppSettings["token"];
             
             await _client.LoginAsync(TokenType.Bot, token);
@@ -27,30 +44,42 @@ namespace InkDiscordBot
             
         }
 
+        /// <summary>
+        /// This handles a command when a user executes one
+        /// </summary>
         private async Task Client_SlashCommandExecuted(SocketSlashCommand command)
         {
             var executingUser = command.User.Username;
             var userOption = command.GetUser()?.Username ?? string.Empty;
             var amountOption = command.GetAmount();
 
+            // Any operation that takes longer than 3 seconds MUST be deferred and then edited later
+            await command.DeferAsync(true);
+            double balance = 0;
             switch (command.Data.Name)
             {
-                case VipBalance.BalanceCommand:
-                    await command.RespondAsync($"Your balance is {VipBalance.GetBalance(executingUser):#,##0}", ephemeral: true);
+                case BalanceCommand:
+                    balance = await _balanceProvider.GetBalance(executingUser);
+                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Your balance is {balance:#,##0}");
                     break;
-                case VipBalance.DebitCommand:
-                    await command.RespondAsync($"Debited {amountOption:#,##0} from {userOption} - balance is {VipBalance.Debit(userOption, amountOption):#,##0}", ephemeral: true);
+                case DebitCommand:
+                    balance = await _balanceProvider.Debit(userOption, amountOption);
+                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Debited {amountOption:#,##0} from {userOption} - balance is {balance:#,##0}");
                     break;
-                case VipBalance.CreditCommand:
-                    await command.RespondAsync($"Credited {amountOption:#,##0} to {userOption} - balance is {VipBalance.Credit(userOption, amountOption):#,##0}", ephemeral: true);
+                case CreditCommand:
+                    balance = await _balanceProvider.Credit(userOption, amountOption);
+                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Credited {amountOption:#,##0} to {userOption} - balance is {balance:#,##0}");
                     break;
-                case VipBalance.CheckCommand:
-                    await command.RespondAsync($"{userOption}'s balance is {VipBalance.GetBalance(userOption):#,##0}", ephemeral: true);
+                case CheckCommand:
+                    balance = await _balanceProvider.GetBalance(userOption);
+                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"{userOption}'s balance is {balance:#,##0}");
                     break;
             }
-            
         }
 
+        /// <summary>
+        /// This sets up all the app commands when the bot connects
+        /// </summary>
         private async Task Client_Ready()
         {
             var guildId = _client.Guilds.First().Id;
@@ -58,27 +87,27 @@ namespace InkDiscordBot
             var guild = _client.GetGuild(guildId);
 
             var balanceCommand = new SlashCommandBuilder()
-                .WithName(VipBalance.BalanceCommand)
-                .AddNameLocalization(Locale, VipBalance.BalanceCommand)       
+                .WithName(BalanceCommand)
+                .AddNameLocalization(Locale, BalanceCommand) // Note: The API doesn't have good null protection so you HAVE to set up localization apparently
                 .WithDescription("Check my VIP balance!")
                 .AddDescriptionLocalization(Locale, "Check my VIP balance!");
 
             var checkCommand = new SlashCommandBuilder()
-                .WithName(VipBalance.CheckCommand)
-                .AddNameLocalization(Locale, VipBalance.CheckCommand)
+                .WithName(CheckCommand)
+                .AddNameLocalization(Locale, CheckCommand)
                 .WithDescription("Check another user's VIP balance")
                 .AddDescriptionLocalization(Locale, "Check another user's VIP balance")
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName("user")
-                    .WithNameLocalizations(new Dictionary<string, string> { { Locale, "user" } })
+                    .WithNameLocalizations(new Dictionary<string, string> { { Locale, "user" } }) // Note: due to a bug in the api you have to do this instead of .AddNameLocalization
                     .WithType(ApplicationCommandOptionType.User)
                     .WithDescription("The user to check")
                     .AddDescriptionLocalization(Locale, "The user to check")
                     .WithRequired(true));
 
             var creditCommand = new SlashCommandBuilder()
-                .WithName(VipBalance.CreditCommand)
-                .AddNameLocalization(Locale, VipBalance.CreditCommand)
+                .WithName(CreditCommand)
+                .AddNameLocalization(Locale, CreditCommand)
                 .WithDescription("Add VIP credit to a user")
                 .AddDescriptionLocalization(Locale, "Add VIP credit to a user")
                 .AddOption(new SlashCommandOptionBuilder()
@@ -97,8 +126,8 @@ namespace InkDiscordBot
                     .WithRequired(true));
 
             var debitCommand = new SlashCommandBuilder()
-                .WithName(VipBalance.DebitCommand)
-                .AddNameLocalization(Locale, VipBalance.DebitCommand)
+                .WithName(DebitCommand)
+                .AddNameLocalization(Locale, DebitCommand)
                 .WithDescription("Remove VIP credit from a user")
                 .AddDescriptionLocalization(Locale, "Remove VIP credit from a user")
                 .AddOption(new SlashCommandOptionBuilder()
