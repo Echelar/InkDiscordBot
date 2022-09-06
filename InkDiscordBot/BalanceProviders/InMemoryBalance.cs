@@ -20,7 +20,7 @@ namespace InkDiscordBot
             return balance;
         }
 
-        public async Task<double> Credit(string userName, int amount)
+        public async Task<double> Credit(string userName, int amount, string executingUser)
         {
             if (!Balances.ContainsKey(userName))
             {
@@ -33,9 +33,9 @@ namespace InkDiscordBot
             return Balances[userName];
         }
 
-        public async Task<double> Debit(string userName, int amount)
+        public async Task<double> Debit(string userName, int amount, string executingUser)
         {
-            return Credit(userName, amount * -1).GetAwaiter().GetResult();
+            return Credit(userName, amount * -1, executingUser).GetAwaiter().GetResult();
         }
     }
 }

@@ -2,28 +2,43 @@
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
-using Google.Apis.Util.Store;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace InkDiscordBot
 {
     public class GoogleSheetBalanceProvider : IBalanceProvider
     {
+        /// <summary>
+        /// The unique ID of the spreadsheet (it's in the URL if you're editing it - spreadsheets/d/right_here)
+        /// </summary>
         const string SpreadsheetId = "1rjs0QcDRH4uPXnWUZm7EPpNmiw2fcQBou9xLVcR96lw";
 
+        /// <summary>
+        /// SECRET - file contains all the tokens and keys to log in to the service account
+        /// </summary>
+        const string ServiceAccountFileName = "ink-venues-bot.json";
 
-        public async Task<double> Credit(string userName, int amount)
+        // Names of the sheets/tabs - must match the live sheet!
+
+        const string VIPSheetName = "VIPs";
+        const string LifetimeVIPSheetName = "Lifetime VIP";
+        const string AuditSheetName = "Bot Audit";
+
+        // Column indexes - must match the live sheet!
+
+        const int VIPSheetNameColumn = 0;
+        const int VIPSheetAmountColumn = 7;
+        const int LifetimeSheetNameColumn = 0;
+        const int LifetimeSheetAmountColumn = 5;
+
+
+        public async Task<double> Credit(string userName, int amount, string executingUser)
         {
-            throw new NotImplementedException();
+            return await ReadAndUpdateSpreadsheet(userName, amount, executingUser);
         }
 
-        public async Task<double> Debit(string userName, int amount)
+        public async Task<double> Debit(string userName, int amount, string executingUser)
         {
-            throw new NotImplementedException();
+            return await ReadAndUpdateSpreadsheet(userName, amount * -1, executingUser);
         }
 
         public async Task<double> GetBalance(string userName)
@@ -33,15 +48,16 @@ namespace InkDiscordBot
     
 
         /// <summary>
-        /// Main function to make a call to find the user in the spreadsheet and optionally update their value
+        /// Main function to make a call to find the user in the spreadsheet and optionally update their value.
+        /// Also will add an audit log entry if something was changed
         /// </summary>
         /// <param name="userName">The username in question</param>
         /// <param name="amountToAdd">The amount to credit (negative to debit). Null to make no update and return the amount only.</param>
         /// <param name="executingUser">The admin/staff member executing the action (for the audit trail)</param>
         /// <returns>The current/updated amount for the user</returns>
-        public async Task<int> ReadAndUpdateSpreadsheet(string userName, int? amountToAdd, string executingUser)
+        private async Task<int> ReadAndUpdateSpreadsheet(string userName, int? amountToAdd, string executingUser)
         {
-            var credential = GoogleCredential.FromFile("ink-venues-bot.json").CreateScoped("https://www.googleapis.com/auth/spreadsheets");
+            var credential = GoogleCredential.FromFile(ServiceAccountFileName).CreateScoped("https://www.googleapis.com/auth/spreadsheets");
 
             var service = new SheetsService(new BaseClientService.Initializer
             {
@@ -52,20 +68,32 @@ namespace InkDiscordBot
             var sheetRequest = service.Spreadsheets.Get(SpreadsheetId);
             sheetRequest.IncludeGridData = true;
             var spreadsheet = await sheetRequest.ExecuteAsync();
+            bool audit = false;
 
             int amount = -1;
             if (spreadsheet != null)
             {
-                var vipSheet = spreadsheet.Sheets.FirstOrDefault(s => s.Properties.Title == "VIPs");
-                if (vipSheet == null)
-                    return amount;
-
-                foreach (var row in vipSheet.Data.First().RowData)
+                var vipSheet = spreadsheet.Sheets.FirstOrDefault(s => s.Properties.Title == VIPSheetName);
+                if (vipSheet != null)
                 {
-                    if ((row.Values[0].EffectiveValue?.StringValue ?? string.Empty) == userName)
+                    int rowID = 0;
+                    foreach (var row in vipSheet.Data.First().RowData)
                     {
-                        amount = Convert.ToInt32(row.Values[7].EffectiveValue?.NumberValue ?? 0);
-                        break;
+                        if ((row.Values[VIPSheetNameColumn].EffectiveValue?.StringValue ?? string.Empty) == userName)
+                        {
+                            amount = Convert.ToInt32(row.Values[VIPSheetAmountColumn].EffectiveValue?.NumberValue ?? 0);
+                            if (amountToAdd.HasValue)
+                            {
+                                amount += amountToAdd.Value;
+                                var updateRequest = service.Spreadsheets.Values.Update(new ValueRange() { Values = amount.ValueToList() }, 
+                                    SpreadsheetId, Utilities.GetRangeId(VIPSheetName, VIPSheetAmountColumn, rowID));
+                                updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+                                await updateRequest.ExecuteAsync();
+                                audit = true;
+                            }
+                            break;
+                        }
+                        rowID++;
                     }
                 }
             }

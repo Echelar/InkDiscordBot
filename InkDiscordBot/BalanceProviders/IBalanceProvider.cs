@@ -6,7 +6,7 @@
     public interface IBalanceProvider
     {
         Task<double> GetBalance(string userName);
-        Task<double> Credit(string userName, int amount);
-        Task<double> Debit(string userName, int amount);
+        Task<double> Credit(string userName, int amount, string executingUser);
+        Task<double> Debit(string userName, int amount, string executingUser);
     }
 }

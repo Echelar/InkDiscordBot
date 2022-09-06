@@ -63,11 +63,11 @@ namespace InkDiscordBot
                     await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Your balance is {balance:#,##0}");
                     break;
                 case DebitCommand:
-                    balance = await _balanceProvider.Debit(userOption, amountOption);
+                    balance = await _balanceProvider.Debit(userOption, amountOption, executingUser);
                     await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Debited {amountOption:#,##0} from {userOption} - balance is {balance:#,##0}");
                     break;
                 case CreditCommand:
-                    balance = await _balanceProvider.Credit(userOption, amountOption);
+                    balance = await _balanceProvider.Credit(userOption, amountOption, executingUser);
                     await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Credited {amountOption:#,##0} to {userOption} - balance is {balance:#,##0}");
                     break;
                 case CheckCommand:
