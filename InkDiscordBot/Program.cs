@@ -20,6 +20,9 @@ namespace InkDiscordBot
         // Swappable implementation if needed
         private IBalanceProvider _balanceProvider = new GoogleSheetBalanceProvider();
 
+        /// <summary>
+        /// Main (async) entry point.
+        /// </summary>
         public async Task MainAsync()
         {
             var config = new DiscordSocketConfig()
@@ -52,28 +55,46 @@ namespace InkDiscordBot
             var executingUser = command.User.Username;
             var userOption = command.GetUser()?.Username ?? string.Empty;
             var amountOption = command.GetAmount();
+            var isCasinoCreditType = command.GetCreditDebitType() == "casino";
 
             // Any operation that takes longer than 3 seconds MUST be deferred and then edited later
             await command.DeferAsync(true);
-            double balance = 0;
+            (int? Casino, int? Court) balances = (null, null);
             switch (command.Data.Name)
             {
                 case BalanceCommand:
-                    balance = await _balanceProvider.GetBalance(executingUser);
-                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Your balance is {balance:#,##0}");
+                    balances = await _balanceProvider.GetBalance(executingUser);
+                    if (balances.Casino.HasValue)
+                    {
+                        await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Your casino balance is {balances.Casino:#,##0}, and your court balance is {balances.Court} hour(s).");
+                    }
+                    else
+                    {
+                        await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Your username ({executingUser}) was not found in our records. Please contact a staff member if you believe this to be a mistake.");
+                        return;
+                    }
                     break;
                 case DebitCommand:
-                    balance = await _balanceProvider.Debit(userOption, amountOption, executingUser);
-                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Debited {amountOption:#,##0} from {userOption} - balance is {balance:#,##0}");
+                    balances = await _balanceProvider.Debit(userOption, amountOption, executingUser, isCasinoCreditType);
+                    if (balances.Casino.HasValue)
+                        await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Debited {amountOption:#,##0} from {userOption} - balance is {(isCasinoCreditType ? balances.Casino : balances.Court):#,##0}");
                     break;
                 case CreditCommand:
-                    balance = await _balanceProvider.Credit(userOption, amountOption, executingUser);
-                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Credited {amountOption:#,##0} to {userOption} - balance is {balance:#,##0}");
+                    balances = await _balanceProvider.Credit(userOption, amountOption, executingUser, isCasinoCreditType);
+                    if (balances.Casino.HasValue)
+                        await command.ModifyOriginalResponseAsync(mp => mp.Content = $"Credited {amountOption:#,##0} to {userOption} - balance is {(isCasinoCreditType ? balances.Casino : balances.Court):#,##0}");
                     break;
                 case CheckCommand:
-                    balance = await _balanceProvider.GetBalance(userOption);
-                    await command.ModifyOriginalResponseAsync(mp => mp.Content = $"{userOption}'s balance is {balance:#,##0}");
+                    balances = await _balanceProvider.GetBalance(userOption);
+                    if (balances.Casino.HasValue)
+                        await command.ModifyOriginalResponseAsync(mp => mp.Content = $"{userOption}'s casino balance is {balances.Casino:#,##0}, and their court balance is {balances.Court} hour(s).");
                     break;
+            }
+
+            if (!balances.Casino.HasValue)
+            {
+                // The reply for anything other than balancecommand if user not found
+                await command.ModifyOriginalResponseAsync(mp => mp.Content = $"The user '{userOption}' was not found in the spreadsheet. No updates were made.");
             }
         }
 
@@ -118,6 +139,15 @@ namespace InkDiscordBot
                     .AddDescriptionLocalization(Locale, "The user to credit")
                     .WithRequired(true))
                 .AddOption(new SlashCommandOptionBuilder()
+                    .WithName("credit-type")
+                    .WithNameLocalizations(new Dictionary<string, string> { { Locale, "credit-type" } })
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithDescription("Casino or Courting Hour credit?")
+                    .AddDescriptionLocalization(Locale, "Casino or Courting Hour credit?")
+                    .WithRequired(true)
+                    .AddChoice("casino", "casino", new Dictionary<string, string> { { Locale, "casino" } })
+                    .AddChoice("court", "court", new Dictionary<string, string> { { Locale, "court" } } ))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("amount")
                     .WithNameLocalizations(new Dictionary<string, string> { { Locale, "amount" } })
                     .WithType(ApplicationCommandOptionType.Integer)
@@ -137,6 +167,15 @@ namespace InkDiscordBot
                     .WithDescription("The user to debit")
                     .AddDescriptionLocalization(Locale, "The user to debit")
                     .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
+                    .WithName("credit-type")
+                    .WithNameLocalizations(new Dictionary<string, string> { { Locale, "credit-type" } })
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithDescription("Casino or Courting Hour credit?")
+                    .AddDescriptionLocalization(Locale, "Casino or Courting Hour credit?")
+                    .WithRequired(true)
+                    .AddChoice("casino", "casino", new Dictionary<string, string> { { Locale, "casino" } })
+                    .AddChoice("court", "court", new Dictionary<string, string> { { Locale, "court" } }))
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName("amount")
                     .WithNameLocalizations(new Dictionary<string, string> { { Locale, "amount" } })

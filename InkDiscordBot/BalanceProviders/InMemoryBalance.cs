@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace InkDiscordBot
+﻿namespace InkDiscordBot
 {
     /// <summary>
     /// In-memory implementation for testing purposes. Not for production
@@ -13,14 +7,14 @@ namespace InkDiscordBot
     {
         private Dictionary<string, int> Balances { get; } = new Dictionary<string, int>();
 
-        public async Task<double> GetBalance(string userName)
+        public async Task<(int? Casino, int? Court)> GetBalance(string userName)
         {
             Balances.TryGetValue(userName, out var balance);
 
-            return balance;
+            return (balance, null);
         }
 
-        public async Task<double> Credit(string userName, int amount, string executingUser)
+        public async Task<(int? Casino, int? Court)> Credit(string userName, int amount, string executingUser, bool isCasino)
         {
             if (!Balances.ContainsKey(userName))
             {
@@ -30,12 +24,12 @@ namespace InkDiscordBot
             {
                 Balances[userName] += amount;
             }
-            return Balances[userName];
+            return (Balances[userName], null);
         }
 
-        public async Task<double> Debit(string userName, int amount, string executingUser)
+        public async Task<(int? Casino, int? Court)> Debit(string userName, int amount, string executingUser, bool isCasino)
         {
-            return Credit(userName, amount * -1, executingUser).GetAwaiter().GetResult();
+            return Credit(userName, amount * -1, executingUser, isCasino).GetAwaiter().GetResult();
         }
     }
 }

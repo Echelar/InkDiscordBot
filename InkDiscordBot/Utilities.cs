@@ -9,14 +9,28 @@ namespace InkDiscordBot
 {
     public static class Utilities
     {
+        /// <summary>
+        /// Pulls out the 'amount' option from the command (and converts to int)
+        /// </summary>
         public static int GetAmount(this SocketSlashCommand command)
         {
             return Convert.ToInt32(command.Data.Options.FirstOrDefault(o => o.Name == "amount")?.Value ?? 0);
         }
 
+        /// <summary>
+        /// Pulls out the 'user' option from the command
+        /// </summary>
         public static SocketGuildUser? GetUser(this SocketSlashCommand command)
         {
             return command.Data.Options.FirstOrDefault(o => o.Name == "user")?.Value as SocketGuildUser;
+        }
+
+        /// <summary>
+        /// Pulls the 'credit-type' option from the command
+        /// </summary>
+        public static string? GetCreditDebitType(this SocketSlashCommand command)
+        {
+            return command.Data.Options.FirstOrDefault(o => o.Name == "credit-type")?.Value as string;
         }
 
         /// <summary>

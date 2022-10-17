@@ -5,8 +5,8 @@
     /// </summary>
     public interface IBalanceProvider
     {
-        Task<double> GetBalance(string userName);
-        Task<double> Credit(string userName, int amount, string executingUser);
-        Task<double> Debit(string userName, int amount, string executingUser);
+        Task<(int? Casino, int? Court)> GetBalance(string userName);
+        Task<(int? Casino, int? Court)> Credit(string userName, int amount, string executingUser, bool isCasino);
+        Task<(int? Casino, int? Court)> Debit(string userName, int amount, string executingUser, bool isCasino);
     }
 }
