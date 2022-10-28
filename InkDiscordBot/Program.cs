@@ -17,7 +17,7 @@ namespace InkDiscordBot
         public const string Locale = "en-US";
         private DiscordSocketClient _client;
 
-        // Swappable implementation if needed
+        // Swappable implementation if needed for testing
         private IBalanceProvider _balanceProvider = new GoogleSheetBalanceProvider();
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace InkDiscordBot
         private async Task Client_SlashCommandExecuted(SocketSlashCommand command)
         {
             var executingUser = command.User.Username;
-            var userOption = command.GetUser()?.Username ?? string.Empty;
+            var userOption = command.GetUser(_client) ?? string.Empty;
             var amountOption = command.GetAmount();
             var isCasinoCreditType = command.GetCreditDebitType() == "casino";
 
@@ -121,7 +121,7 @@ namespace InkDiscordBot
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName("user")
                     .WithNameLocalizations(new Dictionary<string, string> { { Locale, "user" } }) // Note: due to a bug in the api you have to do this instead of .AddNameLocalization
-                    .WithType(ApplicationCommandOptionType.User)
+                    .WithType(ApplicationCommandOptionType.String)
                     .WithDescription("The user to check")
                     .AddDescriptionLocalization(Locale, "The user to check")
                     .WithRequired(true));
@@ -134,7 +134,7 @@ namespace InkDiscordBot
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName("user")
                     .WithNameLocalizations(new Dictionary<string, string> { { Locale, "user" } })
-                    .WithType(ApplicationCommandOptionType.User)
+                    .WithType(ApplicationCommandOptionType.String)
                     .WithDescription("The user to credit")
                     .AddDescriptionLocalization(Locale, "The user to credit")
                     .WithRequired(true))
@@ -163,7 +163,7 @@ namespace InkDiscordBot
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName("user")
                     .WithNameLocalizations(new Dictionary<string, string> { { Locale, "user" } })
-                    .WithType(ApplicationCommandOptionType.User)
+                    .WithType(ApplicationCommandOptionType.String)
                     .WithDescription("The user to debit")
                     .AddDescriptionLocalization(Locale, "The user to debit")
                     .WithRequired(true))

@@ -13,7 +13,7 @@ namespace InkDiscordBot
         const string SpreadsheetId = "1rjs0QcDRH4uPXnWUZm7EPpNmiw2fcQBou9xLVcR96lw";
 
         /// <summary>
-        /// SECRET - file contains all the tokens and keys to log in to the service account
+        /// SECRET - file contains all the tokens and keys to log in to the google service account
         /// </summary>
         const string ServiceAccountFileName = "ink-venues-bot.json";
 
@@ -142,7 +142,7 @@ namespace InkDiscordBot
 
                 if (audit)
                 {
-                    await AddAuditTrail(service, spreadsheet, userName, executingUser, amountToAdd, isCasino ? amount.Value : court.Value, isCasino);
+                    await AddAuditTrail(service, spreadsheet, userName, executingUser, amountToAdd.GetValueOrDefault(0), isCasino ? amount.Value : court.Value, isCasino);
                 }
             }
             return (amount, court);
@@ -159,7 +159,7 @@ namespace InkDiscordBot
         /// <param name="newBalance">The new balance</param>
         /// <param name="isCasino">True if casino balance, false if court balance</param>
         /// <returns></returns>
-        private static async Task AddAuditTrail(SheetsService service, Spreadsheet spreadsheet, string userName, string executingUser, int? amountToAdd, int newBalance, bool isCasino)
+        private static async Task AddAuditTrail(SheetsService service, Spreadsheet spreadsheet, string userName, string executingUser, int amountToAdd, int newBalance, bool isCasino)
         {
             var auditSheet = spreadsheet.Sheets.FirstOrDefault(s => s.Properties.Title == AuditSheetName);
             if (auditSheet != null)

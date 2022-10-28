@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace InkDiscordBot
@@ -20,9 +21,20 @@ namespace InkDiscordBot
         /// <summary>
         /// Pulls out the 'user' option from the command
         /// </summary>
-        public static SocketGuildUser? GetUser(this SocketSlashCommand command)
-        {
-            return command.Data.Options.FirstOrDefault(o => o.Name == "user")?.Value as SocketGuildUser;
+        public static string? GetUser(this SocketSlashCommand command, DiscordSocketClient client)
+        {                   
+            var user = command.Data.Options.FirstOrDefault(o => o.Name == "user")?.Value as string;
+            
+            // If you type an @ user into this string input, it comes in as "<@384728347234>" (the user's id)
+            var userRegexMatch = Regex.Match(user, @"^<@(?<userid>\d+)>$");
+            if (userRegexMatch.Success)
+            {
+                if (ulong.TryParse(userRegexMatch.Groups["userid"].Value, out var userId))
+                {
+                    return client.GetUser(userId)?.Username ?? string.Empty;
+                }
+            }
+            return user;
         }
 
         /// <summary>
