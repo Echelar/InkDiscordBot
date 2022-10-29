@@ -18,4 +18,15 @@ There are a number of "secrets" (passwords, tokens, etc) that I have not include
   - Once you have created and are in your new project, search for 'service account' - you want one that says something like "IAM & Admin/Service Accounts". Once at that tab, click Create Service Account, fill out some reasonable values for the name and id and description.
   - Go to the Keys tab of the service account and click 'Add Key'. Accept the 'json' format and confirm this. It will download a .json file to your machine -- move this to your code folder and put it in the root directory (alongside 'Program.cs') and name it 'ink-venues-bot.json' (hardcoded filename in GoogleSheetBalance.cs). This file contains all information necessary to authenticate as this service account and should be kept secret.
   - Back on the google cloud console site: you should now see the 'email' that represents your service account - you can now go to your google spreadsheet and add this account email as an Editor of the sheet
-- You should now be able to run the bot by starting the application in visual studio (or whatever IDE you use). 
+- You should now be able to run the bot by starting the application in visual studio (or whatever IDE you use). After about 10 seconds, when the console reads 'Ready', the bot should come online in Discord. You can now see the commands by typing / in discord to start the slash commands.
+
+# Hosting
+
+Permanent hosting is something that we will want to figure out. Currently, I have it hosted in microsoft azure as a Web Job underneath a blank App Service. Because it needs to be online 24/7 and not idled out, I had to pick a higher pay tier than free, so it costs about $30/m. I get some free credits as a part of my irl job, so it doesn't actually cost me anything, but I think there are likely many better options to host it.
+
+Check some of these out and look for pros/cons I suppose:
+
+https://geekflare.com/discord-bot-hosting/
+
+https://www.writebots.com/discord-bot-hosting/
+
